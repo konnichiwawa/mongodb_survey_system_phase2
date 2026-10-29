@@ -1,0 +1,100 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据统计 - 问卷管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .stats-box {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 28px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+            margin: 24px 0;
+        }
+        .stat-card {
+            padding: 22px;
+            text-align: center;
+            background: #f4f7fc;
+            border-radius: 10px;
+        }
+        .stat-number {
+            margin-top: 10px;
+            font-size: 30px;
+            font-weight: bold;
+            color: #3568d4;
+        }
+        .stats-box label {
+            display: block;
+            margin: 18px 0 6px;
+        }
+        .stats-box input {
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        .stats-box button {
+            margin-left: 8px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            background: #3568d4;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <main class="stats-box">
+        <h1>问卷数据统计</h1>
+        <p>输入问卷 ID，查看对应问卷的统计数据。</p>
+
+        <form id="stats-form">
+            <label for="survey-id">问卷 ID</label>
+            <input id="survey-id" name="survey_id"
+                   type="text" placeholder="请输入问卷 ID" required>
+            <button type="submit">查询统计</button>
+        </form>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div>问卷标题</div>
+                <div class="stat-number" id="survey-title"
+                     style="font-size:18px;">暂未查询</div>
+            </div>
+            <div class="stat-card">
+                <div>提交总数</div>
+                <div class="stat-number" id="response-count">--</div>
+            </div>
+        </section>
+
+        <h2>统计详情</h2>
+        <pre id="stats-details"
+             style="white-space:pre-wrap;overflow-wrap:anywhere;">请输入问卷 ID 后查询。</pre>
+
+        <p id="message" role="status"></p>
+        <a href="/">返回首页</a>
+    </main>
+
+    <script>
+        document.getElementById("stats-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            document.getElementById("message").textContent =
+                "页面已就绪，统计查询接口尚未连接。";
+        });
+    </script>
+</body>
+</html>
+```

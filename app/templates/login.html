@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录 - 问卷系统</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 40px 16px;
+            font-family: "Microsoft YaHei", sans-serif;
+            background: #f3f6fb;
+            color: #263247;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 40px auto;
+            padding: 32px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 6px 24px #20305012;
+        }
+
+        h1 { text-align: center; margin-top: 0; }
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            margin: 18px 0 8px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d5dce8;
+            border-radius: 7px;
+            font-size: 15px;
+        }
+
+        input:focus {
+            outline: 2px solid #b8d0ff;
+            border-color: #3978e8;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 12px;
+            border: none;
+            border-radius: 7px;
+            background: #3978e8;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:disabled { opacity: .6; cursor: wait; }
+
+        .switch {
+            margin-top: 18px;
+            text-align: center;
+            color: #3978e8;
+            cursor: pointer;
+        }
+
+        .message {
+            margin-top: 16px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .back {
+            display: block;
+            margin-top: 24px;
+            text-align: center;
+            color: #3978e8;
+            text-decoration: none;
+        }
+
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1 id="pageTitle">用户登录</h1>
+        <p class="subtitle">基于 MongoDB 的问卷系统</p>
+
+        <form id="authForm">
+            <label for="username">用户名</label>
+            <input
+                id="username"
+                name="username"
+                type="text"
+                minlength="3"
+                maxlength="30"
+                autocomplete="username"
+                required
+            >
+
+            <label for="password">密码</label>
+            <input
+                id="password"
+                name="password"
+                type="password"
+                minlength="8"
+                autocomplete="current-password"
+                required
+            >
+
+            <button id="submitButton" type="submit">登录</button>
+        </form>
+
+        <div class="switch" id="switchMode">
+            没有账号？点击注册
+        </div>
+
+        <div class="message" id="message" role="status" aria-live="polite"></div>
+
+        <a class="back" href="/">返回首页</a>
+    </main>
+
+    <script>
+        const form = document.getElementById("authForm");
+        const pageTitle = document.getElementById("pageTitle");
+        const submitButton = document.getElementById("submitButton");
+        const switchMode = document.getElementById("switchMode");
+        const message = document.getElementById("message");
+        const passwordInput = document.getElementById("password");
+
+        let isRegister = false;
+
+        switchMode.addEventListener("click", () => {
+            isRegister = !isRegister;
+
+            pageTitle.textContent = isRegister ? "用户注册" : "用户登录";
+            submitButton.textContent = isRegister ? "注册" : "登录";
+            switchMode.textContent = isRegister
+                ? "已有账号？点击登录"
+                : "没有账号？点击注册";
+
+            passwordInput.autocomplete = isRegister
+                ? "new-password"
+                : "current-password";
+
+            message.textContent = "";
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById("username").value.trim();
+            const password = passwordInput.value;
+
+            if (username.length < 3 || username.length > 30) {
+                message.textContent = "用户名长度需要为 3 到 30 个字符。";
+                return;
+            }
+
+            if (!password || (isRegister && password.length < 8)) {
+                message.textContent = isRegister
+                    ? "密码至少需要 8 个字符。"
+                    : "请输入密码。";
+                return;
+            }
+
+            submitButton.disabled = true;
+            message.textContent = "正在处理，请稍候……";
+
+            try {
+                const endpoint = isRegister
+                    ? "/api/auth/register"
+                    : "/api/auth/login";
+
+                const response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    message.textContent =
+                        result.error || "操作失败，请稍后重试。";
+                    return;
+                }
+
+                if (isRegister) {
+                    message.textContent = "注册成功！正在切换到登录页面……";
+                    isRegister = false;
+                    pageTitle.textContent = "用户登录";
+                    submitButton.textContent = "登录";
+                    switchMode.textContent = "没有账号？点击注册";
+                    passwordInput.autocomplete = "current-password";
+                    passwordInput.value = "";
+                    return;
+                }
+
+                message.textContent = "登录成功，正在进入创建问卷页面……";
+                window.location.href = "/create-survey";
+
+            } catch (error) {
+                message.textContent =
+                    "无法连接服务器，请确认 Flask 服务正在运行。";
+                console.error(error);
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

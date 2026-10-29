@@ -1,0 +1,76 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>填写问卷 - 问卷管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .fill-box {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 28px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+        }
+        .fill-box label {
+            display: block;
+            margin: 16px 0 6px;
+        }
+        .fill-box input[type="text"],
+        .fill-box input[type="url"],
+        .fill-box textarea,
+        .fill-box select {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        .fill-box textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+        .fill-box button {
+            margin-top: 20px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            background: #3568d4;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <main class="fill-box">
+        <h1>填写问卷</h1>
+        <p>请根据实际情况填写以下信息。</p>
+
+        <form id="fill-survey-form">
+            <label for="share-code">问卷分享码</label>
+            <input id="share-code" name="share_code"
+                   type="text" placeholder="请输入问卷分享码" required>
+
+            <label for="answer">问卷答案</label>
+            <textarea id="answer" name="answer"
+                      placeholder="请在此填写答案" required></textarea>
+
+            <button type="submit">提交问卷</button>
+            <a href="/">返回首页</a>
+            <p id="message" role="status"></p>
+        </form>
+    </main>
+
+    <script>
+        document.getElementById("fill-survey-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            document.getElementById("message").textContent =
+                "页面已就绪，提交问卷接口尚未连接。";
+        });
+    </script>
+</body>
+</html>
+```

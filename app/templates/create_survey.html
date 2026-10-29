@@ -1,0 +1,225 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建问卷 - 问卷管理系统</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fb;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+        }
+
+        .survey-box {
+            box-sizing: border-box;
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 28px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+        }
+
+        .survey-box h1 {
+            margin-top: 0;
+            color: #24324a;
+        }
+
+        .survey-box label {
+            display: block;
+            margin: 18px 0 6px;
+        }
+
+        .survey-box input,
+        .survey-box textarea {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .survey-box textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .survey-box button {
+            margin-top: 20px;
+            padding: 11px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #3568d4;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .survey-box button:disabled {
+            background: #9aaed6;
+            cursor: not-allowed;
+        }
+
+        .back-link {
+            margin-left: 14px;
+            color: #3568d4;
+        }
+
+        #message {
+            margin-top: 20px;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .result-box {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f0f7ff;
+            border-radius: 8px;
+            overflow-wrap: anywhere;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="survey-box">
+        <h1>创建问卷</h1>
+        <p>填写问卷基本信息，创建属于你的问卷。</p>
+
+        <form id="create-survey-form">
+            <label for="title">问卷标题</label>
+            <input
+                id="title"
+                name="title"
+                type="text"
+                maxlength="100"
+                placeholder="例如：大学生生活习惯调查"
+                required
+            >
+
+            <label for="description">问卷描述</label>
+            <textarea
+                id="description"
+                name="description"
+                placeholder="请简要介绍问卷的目的和内容"
+            ></textarea>
+
+            <label>
+                <input
+                    id="anonymous"
+                    name="anonymous"
+                    type="checkbox"
+                    style="width:auto;"
+                >
+                允许匿名填写
+            </label>
+
+            <button id="submit-button" type="submit">创建问卷</button>
+            <a class="back-link" href="/">返回首页</a>
+        </form>
+
+        <p id="message" role="status" aria-live="polite"></p>
+
+        <section id="result-box" class="result-box hidden">
+            <h2>问卷创建成功</h2>
+            <p>问卷 ID：<span id="survey-id"></span></p>
+            <p>分享码：<span id="share-code"></span></p>
+            <p>
+                当前状态：<span id="survey-status"></span>
+            </p>
+            <p>
+                提示：问卷目前是草稿状态。需要添加题目并发布后，
+                填写者才能访问。
+            </p>
+        </section>
+    </main>
+
+    <script>
+        const form = document.getElementById("create-survey-form");
+        const message = document.getElementById("message");
+        const submitButton = document.getElementById("submit-button");
+        const resultBox = document.getElementById("result-box");
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const title = document.getElementById("title").value.trim();
+            const description =
+                document.getElementById("description").value.trim();
+            const anonymous =
+                document.getElementById("anonymous").checked;
+
+            if (!title) {
+                message.textContent = "请输入问卷标题。";
+                return;
+            }
+
+            submitButton.disabled = true;
+            message.textContent = "正在创建问卷，请稍候……";
+            resultBox.classList.add("hidden");
+
+            try {
+                const response = await fetch("/api/surveys", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({
+                        title: title,
+                        description: description,
+                        anonymous: anonymous
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        message.textContent =
+                            "请先登录，再创建问卷。";
+                    } else {
+                        message.textContent =
+                            result.error || "创建失败，请检查输入后重试。";
+                    }
+                    return;
+                }
+
+                document.getElementById("survey-id").textContent =
+                    result.survey_id || "未返回";
+                document.getElementById("share-code").textContent =
+                    result.share_code || "未返回";
+                document.getElementById("survey-status").textContent =
+                    result.status || "draft";
+
+                resultBox.classList.remove("hidden");
+                message.textContent =
+                    result.message || "问卷创建成功！";
+
+                // 清空表单，方便继续创建下一份问卷
+                form.reset();
+
+            } catch (error) {
+                message.textContent =
+                    "请求失败，请确认 Flask 服务正在运行，然后刷新页面重试。";
+                console.error("创建问卷请求失败：", error);
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+```

@@ -1,0 +1,227 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加问卷题目</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <main class="container">
+        <h1>添加问卷题目</h1>
+        <p>为草稿问卷添加题目，完成后即可发布。</p>
+
+        <label for="surveyId">问卷 ID</label>
+        <input id="surveyId" type="text"
+               value="6ad633a4e48fb042bb4ea5df"
+               placeholder="请输入问卷 ID">
+
+        <label for="questionTitle">题目内容</label>
+        <input id="questionTitle" type="text"
+               placeholder="例如：你最喜欢哪门课程？">
+
+        <label for="questionType">题目类型</label>
+        <select id="questionType">
+            <option value="single_choice">单选题</option>
+            <option value="multiple_choice">多选题</option>
+            <option value="text">填空题</option>
+            <option value="numeric">数字题</option>
+        </select>
+
+        <div id="optionsArea">
+            <label for="options">选项（每行一个，至少两个）</label>
+            <textarea id="options" rows="4"
+                      placeholder="语文&#10;数学&#10;英语"></textarea>
+        </div>
+
+        <div id="validationArea">
+            <label for="minSelections">多选题最少选择数（可选）</label>
+            <input id="minSelections" type="number" min="0">
+
+            <label for="maxSelections">多选题最多选择数（可选）</label>
+            <input id="maxSelections" type="number" min="0">
+
+            <label for="minLength">填空题最少字符数（可选）</label>
+            <input id="minLength" type="number" min="0">
+
+            <label for="maxLength">填空题最多字符数（可选）</label>
+            <input id="maxLength" type="number" min="0">
+
+            <label for="minValue">数字题最小值（可选）</label>
+            <input id="minValue" type="number" step="any">
+
+            <label for="maxValue">数字题最大值（可选）</label>
+            <input id="maxValue" type="number" step="any">
+
+            <label>
+                <input id="integerOnly" type="checkbox">
+                数字题只允许整数
+            </label>
+        </div>
+
+        <label>
+            <input id="required" type="checkbox" checked>
+            必答题
+        </label>
+
+        <button id="addButton" type="button">添加题目</button>
+        <button id="listButton" type="button">查看已有题目</button>
+
+        <p id="message" role="status"></p>
+        <pre id="questionList"></pre>
+
+        <p><a href="/">返回首页</a></p>
+    </main>
+
+    <script>
+        const typeInput = document.getElementById("questionType");
+        const optionsArea = document.getElementById("optionsArea");
+        const validationArea = document.getElementById("validationArea");
+        const message = document.getElementById("message");
+
+        function updateFields() {
+            const type = typeInput.value;
+            optionsArea.hidden = !["single_choice", "multiple_choice"].includes(type);
+
+            document.getElementById("minSelections").parentElement.hidden = true;
+            document.getElementById("maxSelections").parentElement.hidden = true;
+
+            document.getElementById("minSelections").hidden = type !== "multiple_choice";
+            document.getElementById("maxSelections").hidden = type !== "multiple_choice";
+            document.getElementById("minLength").hidden = type !== "text";
+            document.getElementById("maxLength").hidden = type !== "text";
+            document.getElementById("minValue").hidden = type !== "numeric";
+            document.getElementById("maxValue").hidden = type !== "numeric";
+            document.getElementById("integerOnly").parentElement.hidden = type !== "numeric";
+        }
+
+        // 让各题型只显示对应的校验项。
+        typeInput.addEventListener("change", () => {
+            const type = typeInput.value;
+            optionsArea.hidden = !["single_choice", "multiple_choice"].includes(type);
+
+            document.getElementById("minSelections").hidden = type !== "multiple_choice";
+            document.getElementById("maxSelections").hidden = type !== "multiple_choice";
+            document.getElementById("minLength").hidden = type !== "text";
+            document.getElementById("maxLength").hidden = type !== "text";
+            document.getElementById("minValue").hidden = type !== "numeric";
+            document.getElementById("maxValue").hidden = type !== "numeric";
+            document.getElementById("integerOnly").parentElement.hidden = type !== "numeric";
+        });
+
+        function optionalNumber(id) {
+            const value = document.getElementById(id).value.trim();
+            return value === "" ? null : Number(value);
+        }
+
+        function makeValidation(type) {
+            const validation = {};
+
+            if (type === "multiple_choice") {
+                const min = optionalNumber("minSelections");
+                const max = optionalNumber("maxSelections");
+                if (min !== null) validation.min_selections = min;
+                if (max !== null) validation.max_selections = max;
+            } else if (type === "text") {
+                const min = optionalNumber("minLength");
+                const max = optionalNumber("maxLength");
+                if (min !== null) validation.min_length = min;
+                if (max !== null) validation.max_length = max;
+            } else if (type === "numeric") {
+                const min = optionalNumber("minValue");
+                const max = optionalNumber("maxValue");
+                if (min !== null) validation.min_value = min;
+                if (max !== null) validation.max_value = max;
+                validation.integer = document.getElementById("integerOnly").checked;
+            }
+
+            return validation;
+        }
+
+        async function requestJson(url, options = {}) {
+            const response = await fetch(url, {
+                credentials: "same-origin",
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {})
+                }
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || "请求失败");
+            }
+            return result;
+        }
+
+        document.getElementById("addButton").addEventListener("click", async () => {
+            const surveyId = document.getElementById("surveyId").value.trim();
+            const title = document.getElementById("questionTitle").value.trim();
+            const type = typeInput.value;
+
+            if (!surveyId || !title) {
+                message.textContent = "请填写问卷 ID 和题目内容。";
+                return;
+            }
+
+            const data = {
+                title,
+                type,
+                required: document.getElementById("required").checked,
+                validation: makeValidation(type),
+                jump_rules: []
+            };
+
+            if (["single_choice", "multiple_choice"].includes(type)) {
+                data.options = document.getElementById("options").value
+                    .split("\n")
+                    .map(item => item.trim())
+                    .filter(Boolean);
+            }
+
+            try {
+                const result = await requestJson(
+                    `/api/surveys/${encodeURIComponent(surveyId)}/questions`,
+                    {
+                        method: "POST",
+                        body: JSON.stringify(data)
+                    }
+                );
+
+                message.textContent =
+                    `添加成功！题目 ID：${result.question_id}；顺序：${result.order}`;
+
+                document.getElementById("questionTitle").value = "";
+                document.getElementById("options").value = "";
+                ["minSelections", "maxSelections", "minLength",
+                 "maxLength", "minValue", "maxValue"].forEach(id => {
+                    document.getElementById(id).value = "";
+                });
+            } catch (error) {
+                message.textContent = `添加失败：${error.message}`;
+            }
+        });
+
+        document.getElementById("listButton").addEventListener("click", async () => {
+            const surveyId = document.getElementById("surveyId").value.trim();
+
+            try {
+                const result = await requestJson(
+                    `/api/surveys/${encodeURIComponent(surveyId)}/questions`
+                );
+
+                document.getElementById("questionList").textContent =
+                    JSON.stringify(result.questions, null, 2);
+                message.textContent = `共找到 ${result.count} 道题目。`;
+            } catch (error) {
+                message.textContent = `获取失败：${error.message}`;
+            }
+        });
+
+        updateFields();
+    </script>
+</body>
+</html>
+```
